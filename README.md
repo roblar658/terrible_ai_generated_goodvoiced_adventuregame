@@ -13,7 +13,14 @@
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/e77dc8b6-be9a-445a-b77a-3033690aba44" />
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/57a25de6-71c1-4ee4-9aa3-65573c2dfa77" />
 <img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/6e6499fb-162a-4e4d-875f-9b25c89c3608" />
-![Uploading image.png…]()
+
+[eivind_cottage.mp3](https://github.com/user-attachments/files/33923336/eivind_cottage.mp3)
+[inspect_hotspot_pier_gate.mp3](https://github.com/user-attachments/files/33923332/inspect_hotspot_pier_gate.mp3)
+[item_punch_card.mp3](https://github.com/user-attachments/files/33923330/item_punch_card.mp3)
+[item_tuning_fork.mp3](https://github.com/user-attachments/files/33923329/item_tuning_fork.mp3)
+[unit7_tuning_fork.mp3](https://github.com/user-attachments/files/33923328/unit7_tuning_fork.mp3)
+[unit7_lore.mp3](https://github.com/user-attachments/files/33923326/unit7_lore.mp3)
+
 
 
 ---
