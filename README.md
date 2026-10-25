@@ -16,16 +16,14 @@
 
 ### Lydfiler
 
-| Lydspor | Spiller |
+| Spor | Handling |
 | :--- | :--- |
-| **Eivind Cottage** | <audio controls src="https://github.com/user-attachments/files/33923336/eivind_cottage.mp3"></audio> |
-| **Inspect Hotspot Pier Gate** | <audio controls src="https://github.com/user-attachments/files/33923332/inspect_hotspot_pier_gate.mp3"></audio> |
-| **Item Punch Card** | <audio controls src="https://github.com/user-attachments/files/33923330/item_punch_card.mp3"></audio> |
-| **Item Tuning Fork** | <audio controls src="https://github.com/user-attachments/files/33923329/item_tuning_fork.mp3"></audio> |
-| **Unit 7 Tuning Fork** | <audio controls src="https://github.com/user-attachments/files/33923328/unit7_tuning_fork.mp3"></audio> |
-| **Unit 7 Lore** | <audio controls src="https://github.com/user-attachments/files/33923326/unit7_lore.mp3"></audio> |
-
-
+| **Eivind Cottage** | [▶️ Spill av i nettleser](https://github.com/user-attachments/files/33923336/eivind_cottage.mp3) |
+| **Inspect Hotspot Pier Gate** | [▶️ Spill av i nettleser](https://github.com/user-attachments/files/33923332/inspect_hotspot_pier_gate.mp3) |
+| **Item Punch Card** | [▶️ Spill av i nettleser](https://github.com/user-attachments/files/33923330/item_punch_card.mp3) |
+| **Item Tuning Fork** | [▶️ Spill av i nettleser](https://github.com/user-attachments/files/33923329/item_tuning_fork.mp3) |
+| **Unit 7 Tuning Fork** | [▶️ Spill av i nettleser](https://github.com/user-attachments/files/33923328/unit7_tuning_fork.mp3) |
+| **Unit 7 Lore** | [▶️ Spill av i nettleser](https://github.com/user-attachments/files/33923326/unit7_lore.mp3) |
 
 ---
 
