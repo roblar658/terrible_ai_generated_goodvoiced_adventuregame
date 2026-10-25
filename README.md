@@ -1,4 +1,4 @@
-<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/77cb903b-4f8c-4db0-a3ca-93264007e7c8" /># The Mystery of Raven Island: Secret of the Keeper
+# The Mystery of Raven Island: Secret of the Keeper
 ### A Narrative-Driven Point-and-Click Adventure in LibGDX
 
 
