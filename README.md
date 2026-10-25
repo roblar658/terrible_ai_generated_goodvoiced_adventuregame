@@ -1,11 +1,20 @@
-# The Mystery of Raven Island: Secret of the Keeper
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/77cb903b-4f8c-4db0-a3ca-93264007e7c8" /># The Mystery of Raven Island: Secret of the Keeper
 ### A Narrative-Driven Point-and-Click Adventure in LibGDX
+
 
 **The Mystery of Raven Island** is a cinematic, atmospheric mystery-adventure built from the ground up in **LibGDX** (Java 21, LWJGL3). Inspired by classics such as *Myst*, *The Longest Journey*, *Return to Monkey Island*, and *Syberia*, the game features:
 - A full 10-chapter narrative manuscript.
 - Layered 16:9 scenic backdrops with physical, transparent visible prop and character sprites.
 - Natural neural voice acting with **100% full-voice coverage**: Every character (Torvald, Astrid, UNIT-7), every clickable object, hotspot, door, and inspectable inventory item is fully spoken aloud by voice actors with exact text synchronization.
 - Sophisticated point-and-click UX: soft golden auras (no crude yellow boxes), contextual action badges, a no-pixel-hunting radar ping system, an interactive inventory dock, item close-up inspection, and an expedition lore log.
+
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/f7876f61-4515-44a9-b55f-073421eb1911" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/421f7e82-952c-4155-9f76-f25c6424cab9" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/e77dc8b6-be9a-445a-b77a-3033690aba44" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/57a25de6-71c1-4ee4-9aa3-65573c2dfa77" />
+<img width="1920" height="1200" alt="image" src="https://github.com/user-attachments/assets/6e6499fb-162a-4e4d-875f-9b25c89c3608" />
+![Uploading image.png…]()
+
 
 ---
 
