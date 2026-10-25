@@ -8,13 +8,15 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Registers all 10 chapters, their scenic backgrounds,
- * visible graphic overlays, and navigational connections in natural English.
+ * Registers all 10 chapters, their scenic backdrops,
+ * visible graphical overlays, and navigational connections in natural English.
  */
 public class SceneRegistry {
     private Map<String, SceneModel> scenes = new LinkedHashMap<>();
 
     public void init() {
+        scenes.clear();
+
         // =========================================================================
         // CHAPTER 1: THE FOGBOUND PIER
         // =========================================================================
@@ -45,7 +47,7 @@ public class SceneRegistry {
             InteractionType.PICKUP
         ).setOverlayTexturePath("images/overlays/lantern_prop.png")
          .setGivenItemId("lantern")
-         .setInspectionText("A heavy maritime storm lantern with brass reflectors and kerosene wick. Casts a warm circle of amber light."));
+         .setInspectionText("A heavy maritime storm lantern with brass reflectors and kerosene wick. Casts a warm circle of amber light. Torvald will need this."));
 
         // 3. Visible Prop: Coiled Hemp Rope with crystalline residue
         scene01.addHotspot(new Hotspot(
@@ -98,7 +100,7 @@ public class SceneRegistry {
             InteractionType.PICKUP
         ).setOverlayTexturePath("images/items/wrench.png")
          .setGivenItemId("wrench")
-         .setInspectionText("A heavy English adjustable spanner. Essential for opening high-pressure steam and hydraulic valves."));
+         .setInspectionText("A heavy English drop-forged adjustable spanner. Essential for loosening seized high-pressure steam and hydraulic valves."));
 
         // Mechanical punch card protocol
         scene02.addHotspot(new Hotspot(
@@ -108,7 +110,7 @@ public class SceneRegistry {
             InteractionType.PICKUP
         ).setOverlayTexturePath("images/items/punch_card.png")
          .setGivenItemId("punch_card")
-         .setInspectionText("A perforated parchment card strip inscribed: 'UNIT-7 Clockwork Awakening Sequence'."));
+         .setInspectionText("A perforated parchment card strip inscribed: 'UNIT-7 Clockwork Awakening Sequence'. Required to initialize the workshop automaton."));
 
         // Exit back to pier
         scene02.addHotspot(new Hotspot(
@@ -124,7 +126,7 @@ public class SceneRegistry {
 
 
         // =========================================================================
-        // CHAPTER 3: THE KEEPER'S ABANDONED STUDY
+        // CHAPTER 3: THE KEEPER'S STUDY
         // =========================================================================
         SceneModel scene03 = new SceneModel(
             "scene_03_cottage",
@@ -150,7 +152,7 @@ public class SceneRegistry {
             450, 400, 110, 110,
             InteractionType.INSPECT
         ).setOverlayTexturePath("images/overlays/safe_prop.png")
-         .setInspectionText("A reinforced safe with a four-digit combination tumbler. The clock and notes suggest the combination 3-1-7-8."));
+         .setInspectionText("A reinforced safe with a four-digit combination tumbler. The clock and notes suggest the combination 3-1-7-8. Inside rests the optical prism schematic."));
 
         // Doorway into the workshop
         scene03.addHotspot(new Hotspot(
@@ -193,6 +195,15 @@ public class SceneRegistry {
          .setDialogueNodeId("unit7_intro")
          .setInspectionText("Astrid's crowning achievement in precision micromirrors and steam hydraulics. Its optical lenses flicker with sapphire light."));
 
+        // Visible Prop: High-Pressure Steam Relief Valve (Requires Wrench)
+        scene04.addHotspot(new Hotspot(
+            "hotspot_workshop_valve",
+            "High-Pressure Steam Manifold",
+            180, 220, 140, 180,
+            InteractionType.USE_ITEM
+        ).setRequiredItemId("wrench")
+         .setInspectionText("A high-pressure steam manifold valve sealed with a rusted hex nut. Excess boiler pressure must be vented using a forged steel wrench to restore hydraulic power to UNIT-7."));
+
         // Heavy door out to the cliffs
         scene04.addHotspot(new Hotspot(
             "hotspot_workshop_to_cliff",
@@ -230,22 +241,22 @@ public class SceneRegistry {
             780, 280, 180, 200,
             InteractionType.TRANSITION
         ).setTargetSceneId("scene_06_staircase")
-         .setInspectionText("A towering megalithic portal carved with ancient stellar runes. It shelters the entrance to the lighthouse interior."));
+         .setInspectionText("A towering granite archway carved with Viking runic harmonic baffles. Beyond lies the entrance to the lighthouse interior."));
 
         scene05.addHotspot(new Hotspot(
             "hotspot_cliff_bridge",
-            "Chasm Suspension Bridge",
-            340, 440, 400, 80,
+            "Swaying Suspension Footbridge",
+            300, 260, 320, 100,
             InteractionType.INSPECT
-        ).setInspectionText("The wooden footboards have tumbled into the sea, but the high-tensile steel cables remain taut."));
+        ).setInspectionText("Steel suspension cables anchored deep into living rock. Spans the chasm leading toward the lighthouse pinnacle."));
 
         scene05.addHotspot(new Hotspot(
             "hotspot_cliff_to_workshop",
-            "Return to Machine Workshop",
-            30, 380, 140, 180,
+            "Blast Door to Workshop",
+            40, 160, 150, 240,
             InteractionType.TRANSITION
         ).setTargetSceneId("scene_04_workshop")
-         .setInspectionText("Seek shelter inside the warmth of the workshop."));
+         .setInspectionText("Retreat from the gale into the sheltered warmth of the clockwork workshop."));
 
         scenes.put(scene05.getId(), scene05);
 
@@ -256,22 +267,31 @@ public class SceneRegistry {
         SceneModel scene06 = new SceneModel(
             "scene_06_staircase",
             6,
-            "Chapter 6: The Lighthouse Dynamo Staircase",
-            "A hollow tower of cut granite and iron. The central copper drive shaft hums with electromagnetic power.",
+            "Chapter 6: The Dynamo Staircase",
+            "A dizzying iron spiral ascending into the gloom. At the center, a rotational dynamo hums with electric charge.",
             "images/scenes/scene_06_staircase.jpg"
         );
+        // Jammed dynamo shaft requiring wrench
+        scene06.addHotspot(new Hotspot(
+            "hotspot_staircase_dynamo",
+            "Rotational Dynamo Drive Shaft",
+            440, 240, 200, 160,
+            InteractionType.USE_ITEM
+        ).setRequiredItemId("wrench")
+         .setInspectionText("The central rotational dynamo drive shaft has jammed against a rusted retaining bracket. A forged wrench can unbolt the bracket to free the shaft and power the elevator lifts."));
+
         scene06.addHotspot(new Hotspot(
             "hotspot_staircase_to_shipwreck",
-            "Descent to Shipwreck Cove",
-            100, 200, 180, 120,
+            "Basalt Passage to Sea Cove",
+            60, 320, 180, 160,
             InteractionType.TRANSITION
         ).setTargetSceneId("scene_07_shipwreck")
-         .setInspectionText("A subterranean tunnel cut through basalt, leading down to the hidden rocky cove where the North Star wrecked."));
+         .setInspectionText("A dripping basalt tunnel carved into the cliff face, leading down to the cove where the North Star lies."));
 
         scene06.addHotspot(new Hotspot(
             "hotspot_staircase_to_caverns",
-            "Cage Lift to Crystal Caverns",
-            320, 80, 180, 100,
+            "Cage Lift to Subterranean Caverns",
+            340, 80, 170, 180,
             InteractionType.TRANSITION
         ).setTargetSceneId("scene_08_caverns")
          .setInspectionText("A counterbalanced iron cage lift descending into the deep geothermal caverns below sea level."));
@@ -336,15 +356,16 @@ public class SceneRegistry {
             "An otherworldly cathedral of towering, bioluminescent azure crystals vibrating deep beneath the ocean bed.",
             "images/scenes/scene_08_caverns.jpg"
         );
-        // Visible Prop: Resonant Tuning Fork Pedestal & Crystal Geode
+        // Visible Prop: Resonant Tuning Fork Pedestal & Crystal Geode (Requires Tuning Fork)
         scene08.addHotspot(new Hotspot(
             "hotspot_caverns_pedestal",
             "Piezoelectric Crystal Altar (432 Hz)",
             720, 220, 150, 260,
-            InteractionType.INSPECT
+            InteractionType.USE_ITEM
         ).setOverlayTexturePath("images/overlays/tuning_fork_pedestal.png")
+         .setRequiredItemId("tuning_fork")
          .setDialogueNodeId("eivind_crystals_monologue")
-         .setInspectionText("The crystals sing in sympathetic harmony with the 432 Hz acoustic tuning fork. Their pure note calms the tremors."));
+         .setInspectionText("The azure crystals vibrate violently with sympathetic tension. An acoustic tuning fork calibrated to 432 Hz will harmonize their frequency and power the express hoist."));
 
         scene08.addHotspot(new Hotspot(
             "hotspot_caverns_to_observatory",
@@ -414,22 +435,24 @@ public class SceneRegistry {
             "The Fresnel lens hums with celestial resonance. The fate of Raven Island and the coastal seas awaits your hand.",
             "images/scenes/scene_10_core.jpg"
         );
-        // Visible Prop: Crystal Prism Core Socket
+        // Visible Prop: Crystal Prism Core Socket (Requires Crystal Prism)
         scene10.addHotspot(new Hotspot(
             "hotspot_core_crystal",
             "Pulsating Crystalline Core",
             570, 270, 140, 140,
-            InteractionType.INSPECT
+            InteractionType.USE_ITEM
         ).setOverlayTexturePath("images/overlays/crystal_prism_socket.png")
-         .setInspectionText("The beating heart of the spire. A colossal piezoelectric geode spinning in sympathetic harmony with Earth's magnetic core."));
+         .setRequiredItemId("crystal_prism")
+         .setInspectionText("The central optical turret of the revolving Fresnel lens is vacant. The Great Azure Focus Prism must be seated here to focus the radiant energy and unlock the master levers."));
 
         // Visible Prop: Master Control Levers (Three Endings)
         scene10.addHotspot(new Hotspot(
             "hotspot_core_levers",
             "Master Control Levers (Silver, Copper, Crystal)",
             430, 540, 420, 160,
-            InteractionType.INSPECT
+            InteractionType.TALK
         ).setOverlayTexturePath("images/overlays/levers_prop.png")
+         .setDialogueNodeId("core_levers_dialogue")
          .setInspectionText("The three judgment levers: Silver (Harmonic Integration - Ending A), Copper (Controlled Damping - Ending B), Crystal (Cosmic Transmission - Ending C)."));
 
         scene10.addHotspot(new Hotspot(

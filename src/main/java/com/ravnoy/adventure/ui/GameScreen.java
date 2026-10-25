@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.ravnoy.adventure.RavnoyGame;
 import com.ravnoy.adventure.model.*;
 
@@ -22,62 +23,58 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Main interactive adventure gameplay screen in LibGDX.
- * Renders layered background scenes, visible interactive prop sprites,
- * smooth hover auras (NO crude yellow boxes), AI speech dialogue with typewriter text,
- * custom cursors, inventory dock, item inspection, and dialogue history log.
+ * Main game screen handling 10-chapter atmospheric layered rendering,
+ * branching English dialogue with dynamic choices, contextual cursor,
+ * inventory item usage across all puzzles, radar ping, journal, and dialogue log.
+ * Chapter dropdown menu removed per design specifications.
  */
 public class GameScreen implements Screen {
     public static final float V_WIDTH = 1280f;
     public static final float V_HEIGHT = 720f;
 
     private final RavnoyGame game;
-    private FitViewport viewport;
-    private SpriteBatch batch;
-    private ShapeRenderer shapeRenderer;
-    private FontManager fonts;
-    private GlyphLayout layout = new GlyphLayout();
+    private final Viewport viewport;
+    private final SpriteBatch batch;
+    private final ShapeRenderer shapeRenderer;
+    private final FontManager fonts;
+    private final GlyphLayout layout = new GlyphLayout();
 
-    // Texture cache
+    private SceneModel currentScene;
     private Map<String, Texture> textureCache = new HashMap<>();
 
-    // Active scene and transitions
-    private SceneModel currentScene;
-    private float sceneFadeAlpha = 0f;
-    private boolean isFadingIn = true;
-    private String pendingSceneId = null;
-
-    // Mouse and interaction
+    // Interaction & Animation Timers
     private Vector2 mousePos = new Vector2();
     private Hotspot hoveredHotspot = null;
     private InventoryItem hoveredInventoryItem = null;
     private float hoverAnimationTimer = 0f;
-
-    // Hotspot Reveal Ping System (Radar)
     private float pingTimer = 0f;
-    private static final float PING_DURATION = 2.5f;
+    private static final float PING_DURATION = 2.0f;
 
-    // Dialogue system
+    // Scene Transition Fade
+    private float sceneFadeAlpha = 0f;
+    private boolean isFadingIn = false;
+    private String pendingSceneId = null;
+
+    // Active Dialogue System
     private DialogueNode activeDialogue = null;
     private float typewriterTimer = 0f;
     private int visibleChars = 0;
     private boolean typewriterFinished = false;
     private int hoveredChoiceIndex = -1;
-    private Rectangle[] choiceRects = new Rectangle[4];
+    private Rectangle[] choiceRects = new Rectangle[12];
 
-    // Modals (Item Inspect, Backlog, Journal, Chapter Menu)
+    // Modals (Item Inspect, Backlog, Journal)
     private InventoryItem inspectingItem = null;
     private boolean showBacklog = false;
     private boolean showJournal = false;
     private float backlogScroll = 0f;
+    private float journalScroll = 0f;
 
-    // Top Bar HUD Rectangles
-    private Rectangle chapterSelectBtnRect = new Rectangle(20, 672, 135, 36);
-    private Rectangle pingBtnRect = new Rectangle(840, 672, 130, 36);
-    private Rectangle backlogBtnRect = new Rectangle(980, 672, 110, 36);
-    private Rectangle journalBtnRect = new Rectangle(1100, 672, 85, 36);
-    private Rectangle soundBtnRect = new Rectangle(1195, 672, 75, 36);
-    private boolean showChapterMenu = false;
+    // Top Bar HUD Rectangles (Clean layout without chapter dropdown)
+    private Rectangle pingBtnRect = new Rectangle(740, 672, 130, 40);
+    private Rectangle backlogBtnRect = new Rectangle(880, 672, 130, 40);
+    private Rectangle journalBtnRect = new Rectangle(1020, 672, 110, 40);
+    private Rectangle soundBtnRect = new Rectangle(1140, 672, 110, 40);
 
     // Bottom Inventory Dock
     private Rectangle inventoryBarRect = new Rectangle(140, 0, 1000, 72);
@@ -205,7 +202,7 @@ public class GameScreen implements Screen {
             renderRadarPing();
         }
 
-        // 5. RENDER TOP HUD (Chapter Title, Reveal Button, Log, Journal, Audio)
+        // 5. RENDER TOP HUD (Chapter Title & Subtitle, Reveal, Log, Journal, Audio)
         renderTopHud();
 
         // 6. RENDER INVENTORY DOCK AT BOTTOM
@@ -216,7 +213,7 @@ public class GameScreen implements Screen {
             renderDialogueBox();
         }
 
-        // 8. RENDER SLEEK ACTION BADGE TOOLTIP ON HOVER (NO YELLOW BOXES!)
+        // 8. RENDER SLEEK ACTION BADGE TOOLTIP ON HOVER
         if (hoveredHotspot != null && activeDialogue == null && inspectingItem == null && !showBacklog && !showJournal) {
             renderActionTooltip(hoveredHotspot, mousePos.x, mousePos.y + 24);
         }
@@ -230,9 +227,6 @@ public class GameScreen implements Screen {
         }
         if (showJournal) {
             renderJournalModal();
-        }
-        if (showChapterMenu) {
-            renderChapterSelectMenu();
         }
 
         // 10. RENDER SCENE CROSS-FADE TRANSITION
@@ -284,7 +278,7 @@ public class GameScreen implements Screen {
         }
 
         hoveredHotspot = null;
-        if (activeDialogue == null && inspectingItem == null && !showBacklog && !showJournal && !showChapterMenu) {
+        if (activeDialogue == null && inspectingItem == null && !showBacklog && !showJournal) {
             for (Hotspot h : currentScene.getHotspots()) {
                 if (h.isActive() && h.getBounds().contains(mousePos)) {
                     hoveredHotspot = h;
@@ -309,43 +303,39 @@ public class GameScreen implements Screen {
     private void renderPropGlowAura(Hotspot h) {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE); // Additive blending for soft glow
-
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
         Rectangle r = h.getBounds();
-        float cx = r.x + r.width / 2f;
-        float cy = r.y + r.height / 2f;
-        float baseR = Math.max(r.width, r.height) / 2f;
+        float pulse = 0.18f + 0.08f * (float) Math.sin(hoverAnimationTimer * 4f);
+        shapeRenderer.setColor(0.95f, 0.82f, 0.40f, pulse);
 
-        // Multi-ring soft golden radial aura
-        for (int i = 4; i >= 1; i--) {
-            float rad = baseR + i * 14f;
-            float alpha = 0.04f * (5 - i);
-            shapeRenderer.setColor(1.0f, 0.88f, 0.45f, alpha);
-            shapeRenderer.circle(cx, cy, rad, 32);
-        }
+        float pad = 12f;
+        shapeRenderer.rect(r.x - pad, r.y - pad, r.width + pad * 2, r.height + pad * 2);
+
         shapeRenderer.end();
-
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
 
     private void renderRadarPing() {
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        float progress = 1.0f - (pingTimer / PING_DURATION);
+        float radius = progress * 70f;
+        float alpha = (1.0f - progress) * 0.85f;
 
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+
         for (Hotspot h : currentScene.getHotspots()) {
             if (h.isActive()) {
                 Rectangle r = h.getBounds();
                 float cx = r.x + r.width / 2f;
                 float cy = r.y + r.height / 2f;
-                float radius = Math.max(r.width, r.height) / 2f + 18f + (float) Math.sin(pingTimer * 6f) * 10f;
-
-                shapeRenderer.setColor(1.0f, 0.88f, 0.40f, Math.min(1f, pingTimer));
-                shapeRenderer.circle(cx, cy, radius, 36);
-                shapeRenderer.circle(cx, cy, radius - 4f, 36);
+                shapeRenderer.setColor(0.95f, 0.85f, 0.45f, alpha);
+                shapeRenderer.circle(cx, cy, radius, 32);
+                shapeRenderer.circle(cx, cy, radius * 0.5f, 24);
             }
         }
+
         shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
     }
@@ -356,13 +346,12 @@ public class GameScreen implements Screen {
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         // Translucent dark glass header
-        shapeRenderer.setColor(0.06f, 0.08f, 0.13f, 0.88f);
+        shapeRenderer.setColor(0.06f, 0.08f, 0.13f, 0.90f);
         shapeRenderer.rect(0, 664, V_WIDTH, 56);
         shapeRenderer.setColor(0.25f, 0.35f, 0.50f, 0.9f);
         shapeRenderer.rect(0, 664, V_WIDTH, 2);
 
         // Buttons
-        drawGlassButton(chapterSelectBtnRect, chapterSelectBtnRect.contains(mousePos));
         drawGlassButton(pingBtnRect, pingBtnRect.contains(mousePos));
         drawGlassButton(backlogBtnRect, backlogBtnRect.contains(mousePos));
         drawGlassButton(journalBtnRect, journalBtnRect.contains(mousePos));
@@ -375,15 +364,14 @@ public class GameScreen implements Screen {
         BitmapFont medium = fonts.getMediumFont();
         BitmapFont small = fonts.getSmallFont();
 
-        // Current Chapter Title & Subtitle in English
+        // Current Chapter Title & Subtitle in English starting smoothly at x = 32
         medium.setColor(0.95f, 0.85f, 0.45f, 1f);
-        medium.draw(batch, currentScene.getTitle(), 175, 700);
+        medium.draw(batch, currentScene.getTitle(), 32, 702);
         small.setColor(0.75f, 0.82f, 0.92f, 0.9f);
-        small.draw(batch, currentScene.getSubtitle(), 175, 680);
+        small.draw(batch, currentScene.getSubtitle(), 32, 680);
 
         // English Button Labels
         small.setColor(Color.WHITE);
-        drawCenteredText(small, "Chapters ▾", chapterSelectBtnRect);
         drawCenteredText(small, "Reveal (Space)", pingBtnRect);
         drawCenteredText(small, "Dialogue Log", backlogBtnRect);
         drawCenteredText(small, "Journal", journalBtnRect);
@@ -432,7 +420,7 @@ public class GameScreen implements Screen {
         batch.end();
 
         if (hoveredInventoryItem != null && activeDialogue == null) {
-            renderActionTooltipCustom(hoveredInventoryItem.getName(), "Right-click to Inspect", mousePos.x, mousePos.y + 32);
+            renderActionTooltipCustom(hoveredInventoryItem.getName(), "Right-click: Inspect | Left-click: Use", mousePos.x, mousePos.y + 32);
         }
     }
 
@@ -440,44 +428,46 @@ public class GameScreen implements Screen {
         Gdx.gl.glEnable(GL20.GL_BLEND);
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
-        float boxX = 80;
-        float boxY = 85;
-        float boxW = V_WIDTH - 160;
-        float boxH = 220;
+        float boxX = 60;
+        float boxY = 75;
+        float boxW = V_WIDTH - 120;
+        float boxH = 300;
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0.06f, 0.08f, 0.12f, 0.95f);
+        shapeRenderer.setColor(0.06f, 0.08f, 0.12f, 0.96f);
         shapeRenderer.rect(boxX, boxY, boxW, boxH);
         shapeRenderer.setColor(0.35f, 0.45f, 0.65f, 0.85f);
         shapeRenderer.rect(boxX, boxY + boxH - 2, boxW, 2);
 
         // Portrait frame
         shapeRenderer.setColor(0.12f, 0.16f, 0.24f, 0.95f);
-        shapeRenderer.rect(boxX + 18, boxY + 28, 164, 164);
+        shapeRenderer.rect(boxX + 20, boxY + 30, 180, 180);
         shapeRenderer.setColor(0.85f, 0.72f, 0.38f, 0.9f);
-        shapeRenderer.rect(boxX + 16, boxY + 26, 168, 168);
+        shapeRenderer.rect(boxX + 18, boxY + 28, 184, 184);
         shapeRenderer.end();
 
         hoveredChoiceIndex = -1;
-        List<DialogueChoice> choices = activeDialogue.getChoices();
+        List<DialogueChoice> choices = activeDialogue.getAvailableChoices(game.getGameState());
         if (typewriterFinished && !choices.isEmpty()) {
-            float choiceY = boxY + 20;
-            float choiceW = boxW - 220;
+            float choiceY = boxY + 16;
+            float choiceW = boxW - 245;
             float choiceH = 34;
 
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
             for (int i = choices.size() - 1; i >= 0; i--) {
                 DialogueChoice c = choices.get(i);
-                choiceRects[i].set(boxX + 200, choiceY, choiceW, choiceH);
+                choiceRects[i].set(boxX + 225, choiceY, choiceW, choiceH);
 
                 boolean hovered = choiceRects[i].contains(mousePos);
                 if (hovered) {
                     hoveredChoiceIndex = i;
-                    shapeRenderer.setColor(0.25f, 0.35f, 0.55f, 0.95f);
+                    shapeRenderer.setColor(0.28f, 0.38f, 0.60f, 0.95f);
                 } else {
-                    shapeRenderer.setColor(0.12f, 0.16f, 0.24f, 0.85f);
+                    shapeRenderer.setColor(0.12f, 0.16f, 0.24f, 0.88f);
                 }
                 shapeRenderer.rect(choiceRects[i].x, choiceRects[i].y, choiceRects[i].width, choiceRects[i].height);
+                shapeRenderer.setColor(0.40f, 0.52f, 0.72f, 0.8f);
+                shapeRenderer.rect(choiceRects[i].x, choiceRects[i].y + choiceRects[i].height - 1, choiceRects[i].width, 1);
                 choiceY += 40;
             }
             shapeRenderer.end();
@@ -487,16 +477,16 @@ public class GameScreen implements Screen {
         batch.begin();
         Texture portrait = getTexture(activeDialogue.getPortraitPath());
         if (portrait != null) {
-            batch.draw(portrait, boxX + 18, boxY + 28, 164, 164);
+            batch.draw(portrait, boxX + 20, boxY + 30, 180, 180);
         }
 
         fonts.getLargeFont().setColor(0.95f, 0.85f, 0.45f, 1f);
-        fonts.getLargeFont().draw(batch, activeDialogue.getSpeakerName(), boxX + 200, boxY + boxH - 20);
+        fonts.getLargeFont().draw(batch, activeDialogue.getSpeakerName(), boxX + 225, boxY + boxH - 22);
 
         BitmapFont medium = fonts.getMediumFont();
         medium.setColor(Color.WHITE);
         String currentText = activeDialogue.getText().substring(0, visibleChars);
-        medium.draw(batch, currentText, boxX + 200, boxY + boxH - 58, boxW - 220, -1, true);
+        medium.draw(batch, currentText, boxX + 225, boxY + boxH - 58, boxW - 250, -1, true);
 
         if (typewriterFinished && !choices.isEmpty()) {
             for (int i = 0; i < choices.size(); i++) {
@@ -507,12 +497,12 @@ public class GameScreen implements Screen {
                 } else {
                     medium.setColor(0.85f, 0.92f, 1f, 0.9f);
                 }
-                medium.draw(batch, "▸ " + c.getText(), cr.x + 14, cr.y + 24);
+                medium.draw(batch, "• " + c.getText(), cr.x + 14, cr.y + 24);
             }
         } else if (typewriterFinished) {
             BitmapFont small = fonts.getSmallFont();
             small.setColor(0.7f, 0.8f, 0.95f, 0.7f);
-            small.draw(batch, "[Click or press Space to continue]", boxX + boxW - 280, boxY + 30);
+            small.draw(batch, "[Click or press Space to continue]", boxX + boxW - 280, boxY + 25);
         }
 
         batch.end();
@@ -598,14 +588,14 @@ public class GameScreen implements Screen {
                     fonts.getMediumFont().setColor(0.95f, 0.85f, 0.45f, 1f);
                     fonts.getMediumFont().draw(batch, entry.getSpeaker() + ":", mx2 + 30, logY);
                     fonts.getMediumFont().setColor(0.9f, 0.95f, 1f, 0.95f);
-                    fonts.getMediumFont().draw(batch, entry.getText(), mx2 + 200, logY, 620, -1, true);
+                    fonts.getMediumFont().draw(batch, entry.getText(), mx2 + 30, logY - 24, mw - 60, -1, true);
                 }
                 logY -= 75;
             }
         }
 
-        fonts.getSmallFont().setColor(0.6f, 0.7f, 0.85f, 0.8f);
-        fonts.getSmallFont().draw(batch, "[Click anywhere to dismiss history log]", mx2 + 310, my2 + 35);
+        fonts.getSmallFont().setColor(0.6f, 0.7f, 0.85f, 0.7f);
+        fonts.getSmallFont().draw(batch, "[Click anywhere to close log]", mx2 + 340, my2 + 35);
         batch.end();
     }
 
@@ -622,9 +612,9 @@ public class GameScreen implements Screen {
         float mx = (V_WIDTH - mw) / 2f;
         float my = (V_HEIGHT - mh) / 2f;
 
-        shapeRenderer.setColor(0.08f, 0.10f, 0.15f, 0.97f);
+        shapeRenderer.setColor(0.08f, 0.10f, 0.15f, 0.98f);
         shapeRenderer.rect(mx, my, mw, mh);
-        shapeRenderer.setColor(0.85f, 0.70f, 0.35f, 0.9f);
+        shapeRenderer.setColor(0.85f, 0.72f, 0.38f, 0.9f);
         shapeRenderer.rect(mx, my + mh - 3, mw, 3);
         shapeRenderer.end();
         Gdx.gl.glDisable(GL20.GL_BLEND);
@@ -633,66 +623,39 @@ public class GameScreen implements Screen {
         float mx2 = (V_WIDTH - 840) / 2f;
         float my2 = (V_HEIGHT - 540) / 2f;
 
-        fonts.getTitleFont().setColor(0.95f, 0.85f, 0.45f, 1f);
-        fonts.getTitleFont().draw(batch, "Eivind's Expedition Journal & Discoveries", mx2 + 35, my2 + mh - 30);
+        fonts.getLargeFont().setColor(0.95f, 0.85f, 0.45f, 1f);
+        fonts.getLargeFont().draw(batch, "Expedition Journal & Clues", mx2 + 30, my2 + mh - 25);
 
-        float noteY = my2 + mh - 90;
-        for (String note : game.getGameState().getJournalNotes()) {
-            if (noteY < my2 + 60) break;
-            fonts.getMediumFont().setColor(0.9f, 0.95f, 1f, 1f);
-            fonts.getMediumFont().draw(batch, "• " + note, mx2 + 35, noteY, 760, -1, true);
-            noteY -= 65;
-        }
-
-        fonts.getSmallFont().setColor(0.6f, 0.7f, 0.85f, 0.8f);
-        fonts.getSmallFont().draw(batch, "[Click anywhere to dismiss journal]", mx2 + 310, my2 + 35);
-        batch.end();
-    }
-
-    private void renderChapterSelectMenu() {
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
-        float menuX = chapterSelectBtnRect.x;
-        float menuW = 340;
-        float menuH = 380;
-        float menuY = chapterSelectBtnRect.y - menuH - 4;
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0.06f, 0.08f, 0.13f, 0.98f);
-        shapeRenderer.rect(menuX, menuY, menuW, menuH);
-        shapeRenderer.setColor(0.35f, 0.50f, 0.75f, 0.85f);
-        shapeRenderer.rect(menuX, menuY, menuW, 2);
-        shapeRenderer.end();
-        Gdx.gl.glDisable(GL20.GL_BLEND);
-
-        batch.begin();
-        float itemY = menuY + menuH - 24;
-        for (SceneModel sc : game.getSceneRegistry().getAllScenes().values()) {
-            boolean hovered = mousePos.x >= menuX && mousePos.x <= menuX + menuW && mousePos.y >= itemY - 20 && mousePos.y <= itemY + 10;
-            if (sc == currentScene) {
-                fonts.getSmallFont().setColor(0.95f, 0.85f, 0.45f, 1f);
-            } else if (hovered) {
-                fonts.getSmallFont().setColor(1f, 1f, 0.6f, 1f);
-            } else {
-                fonts.getSmallFont().setColor(0.85f, 0.90f, 0.98f, 0.9f);
+        float jY = my2 + mh - 80 + journalScroll;
+        List<String> notes = game.getGameState().getJournalNotes();
+        for (String note : notes) {
+            if (jY < my2 + 60) break;
+            if (jY < my2 + mh - 50) {
+                fonts.getMediumFont().setColor(0.95f, 0.85f, 0.45f, 1f);
+                fonts.getMediumFont().draw(batch, "•", mx2 + 30, jY);
+                fonts.getMediumFont().setColor(0.90f, 0.95f, 1f, 0.95f);
+                fonts.getMediumFont().draw(batch, note, mx2 + 55, jY, mw - 85, -1, true);
             }
-            fonts.getSmallFont().draw(batch, sc.getTitle(), menuX + 16, itemY);
-            itemY -= 35;
+            jY -= 55;
         }
+
+        fonts.getSmallFont().setColor(0.6f, 0.7f, 0.85f, 0.7f);
+        fonts.getSmallFont().draw(batch, "[Click anywhere to close journal]", mx2 + 310, my2 + 35);
         batch.end();
     }
 
     private void renderActionTooltip(Hotspot h, float x, float y) {
-        String actionTag = switch (h.getInteractionType()) {
-            case TALK -> "[TALK] ";
-            case PICKUP -> "[TAKE] ";
-            case TRANSITION -> "[ENTER] ";
-            case USE_ITEM -> "[USE ITEM] ";
-            default -> "[EXAMINE] ";
-        };
-        String fullText = actionTag + h.getName();
+        String actionStr = "";
+        switch (h.getInteractionType()) {
+            case TALK: actionStr = "TALK"; break;
+            case PICKUP: actionStr = "TAKE"; break;
+            case TRANSITION: actionStr = "ENTER"; break;
+            case USE_ITEM: actionStr = "USE ITEM"; break;
+            case INSPECT:
+            default: actionStr = "EXAMINE"; break;
+        }
 
+        String fullText = h.getName() + " [" + actionStr + "]";
         layout.setText(fonts.getSmallFont(), fullText);
         float tw = layout.width + 24;
         float th = layout.height + 14;
@@ -785,21 +748,39 @@ public class GameScreen implements Screen {
         game.getGameState().logDialogue(node.getSpeakerName(), node.getText());
 
         if ("TORVALD_GIVE_KEY".equals(node.getTriggerAction())) {
-            game.getGameState().addItem(new InventoryItem(
-                "brass_key",
-                "Wrought Brass Key (Raven Sigil)",
-                "A heavy, ornate brass key provided by Old Torvald. Fits the lock on the wrought iron gate.",
-                "images/items/brass_key.png"
-            ));
-            game.getAudioManager().playSfx("pickup");
+            if (!game.getGameState().hasItem("brass_key")) {
+                game.getGameState().addItem(new InventoryItem(
+                    "brass_key",
+                    "Wrought Brass Key (Raven Sigil)",
+                    "A heavy, ornate brass key provided by Old Torvald. Fits the lock on the wrought iron gate.",
+                    "images/items/brass_key.png"
+                ));
+                game.getAudioManager().playSfx("pickup");
+                game.getGameState().addJournalNote("Received Wrought Brass Key with Raven Sigil from Old Torvald.");
+            }
         } else if ("UNIT7_GIVE_FORK".equals(node.getTriggerAction())) {
-            game.getGameState().addItem(new InventoryItem(
-                "tuning_fork",
-                "Resonance Tuning Fork (432 Hz)",
-                "A precision silver-crystal tuning fork from UNIT-7. Calibrated to sympathetic bedrock resonance.",
-                "images/items/tuning_fork.png"
-            ));
-            game.getAudioManager().playSfx("crystal");
+            if (!game.getGameState().hasItem("tuning_fork")) {
+                game.getGameState().addItem(new InventoryItem(
+                    "tuning_fork",
+                    "Resonance Tuning Fork (432 Hz)",
+                    "A precision silver-crystal tuning fork from UNIT-7. Calibrated to sympathetic bedrock resonance.",
+                    "images/items/tuning_fork.png"
+                ));
+                game.getAudioManager().playSfx("crystal");
+                game.getGameState().addJournalNote("Received Resonance Tuning Fork (432 Hz) from UNIT-7.");
+            }
+        } else if ("UNLOCK_CORE_ACCESS".equals(node.getTriggerAction())) {
+            game.getGameState().setFlag("CORE_ACCESS_UNLOCKED");
+            game.getGameState().addJournalNote("Professor Ravn unlocked the ladder to Chapter 10: The Keeper's Core.");
+        } else if ("ENDING_A".equals(node.getTriggerAction())) {
+            game.getGameState().setFlag("ENDING_A_TRIGGERED");
+            game.getGameState().addJournalNote("Ending A: Harmonic Integration selected. The spire and island rest in permanent equilibrium.");
+        } else if ("ENDING_B".equals(node.getTriggerAction())) {
+            game.getGameState().setFlag("ENDING_B_TRIGGERED");
+            game.getGameState().addJournalNote("Ending B: Controlled Damping selected. The spire is safely deactivated forever.");
+        } else if ("ENDING_C".equals(node.getTriggerAction())) {
+            game.getGameState().setFlag("ENDING_C_TRIGGERED");
+            game.getGameState().addJournalNote("Ending C: Cosmic Transmission selected. The sapphire beam shines upward into the stars.");
         }
     }
 
@@ -843,31 +824,6 @@ public class GameScreen implements Screen {
                 return true;
             }
 
-            if (showChapterMenu) {
-                float menuX = chapterSelectBtnRect.x;
-                float menuW = 340;
-                float menuH = 380;
-                float menuY = chapterSelectBtnRect.y - menuH - 4;
-                float itemY = menuY + menuH - 24;
-
-                for (SceneModel sc : game.getSceneRegistry().getAllScenes().values()) {
-                    if (mousePos.x >= menuX && mousePos.x <= menuX + menuW && mousePos.y >= itemY - 20 && mousePos.y <= itemY + 10) {
-                        loadScene(sc.getId(), true);
-                        showChapterMenu = false;
-                        game.getAudioManager().playSfx("click");
-                        return true;
-                    }
-                    itemY -= 35;
-                }
-                showChapterMenu = false;
-                return true;
-            }
-
-            if (chapterSelectBtnRect.contains(mousePos)) {
-                showChapterMenu = !showChapterMenu;
-                game.getAudioManager().playSfx("click");
-                return true;
-            }
             if (pingBtnRect.contains(mousePos)) {
                 pingTimer = PING_DURATION;
                 game.getAudioManager().playSfx("crystal");
@@ -896,9 +852,13 @@ public class GameScreen implements Screen {
                     return true;
                 }
 
-                if (hoveredChoiceIndex >= 0 && hoveredChoiceIndex < activeDialogue.getChoices().size()) {
-                    DialogueChoice choice = activeDialogue.getChoices().get(hoveredChoiceIndex);
+                List<DialogueChoice> choices = activeDialogue.getAvailableChoices(game.getGameState());
+                if (hoveredChoiceIndex >= 0 && hoveredChoiceIndex < choices.size()) {
+                    DialogueChoice choice = choices.get(hoveredChoiceIndex);
                     game.getAudioManager().playSfx("click");
+                    if (choice.getSetFlag() != null) {
+                        game.getGameState().setFlag(choice.getSetFlag());
+                    }
                     if ("dialogue_exit".equals(choice.getTargetNodeId())) {
                         activeDialogue = null;
                         game.getAudioManager().stopVoice();
@@ -906,7 +866,7 @@ public class GameScreen implements Screen {
                         startDialogue(choice.getTargetNodeId());
                     }
                     return true;
-                } else if (activeDialogue.getChoices().isEmpty()) {
+                } else if (choices.isEmpty()) {
                     activeDialogue = null;
                     game.getAudioManager().stopVoice();
                     game.getAudioManager().playSfx("click");
@@ -948,7 +908,6 @@ public class GameScreen implements Screen {
                 if (inspectingItem != null) inspectingItem = null;
                 else if (showBacklog) showBacklog = false;
                 else if (showJournal) showJournal = false;
-                else if (showChapterMenu) showChapterMenu = false;
                 else if (activeDialogue != null) {
                     activeDialogue = null;
                     game.getAudioManager().stopVoice();
@@ -961,32 +920,152 @@ public class GameScreen implements Screen {
         private void handleHotspotClick(Hotspot h) {
             InventoryItem active = game.getGameState().getActiveItem();
 
+            // 1. Direct Item Reactions on Characters & Props
+            if (active != null) {
+                // Torvald reactions
+                if ("hotspot_torvald".equals(h.getId())) {
+                    if ("telegram".equals(active.getId())) {
+                        startDialogue("torvald_telegram_topic");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    } else if ("lantern".equals(active.getId())) {
+                        startDialogue("torvald_unlock_reward");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    }
+                }
+                // UNIT-7 reactions
+                if ("hotspot_workshop_unit7".equals(h.getId())) {
+                    if ("punch_card".equals(active.getId())) {
+                        game.getAudioManager().playSfx("crystal");
+                        game.getGameState().setFlag("UNIT7_AWAKENED");
+                        game.getGameState().addJournalNote("Inserted Protocol A-1 punch card into UNIT-7. Automaton initialized.");
+                        startDialogue("unit7_card_awaken");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    } else if ("telegram".equals(active.getId())) {
+                        startDialogue("unit7_telegram_scan");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    }
+                }
+                // Astrid reactions
+                if ("hotspot_observatory_astrid".equals(h.getId())) {
+                    if ("crystal_prism".equals(active.getId())) {
+                        startDialogue("astrid_prism_inspect");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    } else if ("telegram".equals(active.getId())) {
+                        startDialogue("astrid_telegram_recall");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    }
+                }
+            }
+
+            // 2. Specific Item Requirements to Unlock Mechanisms
             if (h.getRequiredItemId() != null) {
                 if (active != null && active.getId().equals(h.getRequiredItemId())) {
-                    game.getAudioManager().playSfx("door");
-                    if (h.getInteractionType() == InteractionType.TRANSITION) {
+                    // Match found!
+                    if ("hotspot_pier_gate".equals(h.getId())) {
+                        game.getAudioManager().playSfx("door");
+                        game.getGameState().setFlag("GATE_UNLOCKED");
+                        game.getGameState().addJournalNote("Unlocked the wrought iron gate with Torvald's raven key.");
+                        h.setRequiredItemId(null);
                         pendingSceneId = h.getTargetSceneId();
-                        startInspectionDialogue("Eivind Holst", h.getInspectionText(), h.getVoiceAudioPath());
+                        startInspectionDialogue("Eivind Holst", "The heavy brass key turns smoothly in the antique padlock. The iron gate swings open, granting access to the keeper's cottage and inland trails.", "audio/voices/inspect_gate_unlocked.mp3");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    } else if ("hotspot_workshop_valve".equals(h.getId())) {
+                        game.getAudioManager().playSfx("door");
+                        game.getGameState().setFlag("STEAM_VALVE_OPEN");
+                        game.getGameState().addJournalNote("Used forged wrench to vent high-pressure steam manifold. Hydraulic power restored to UNIT-7.");
+                        h.setRequiredItemId(null);
+                        startInspectionDialogue("Eivind Holst", "With a sharp pull on the steel wrench, the valve turns! Excess steam vents with a deafening hiss, routing hydraulic power to the automaton's circuits.", "audio/voices/inspect_workshop_valve_unlocked.mp3");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    } else if ("hotspot_staircase_dynamo".equals(h.getId())) {
+                        game.getAudioManager().playSfx("door");
+                        game.getGameState().setFlag("DYNAMO_RESTORED");
+                        game.getGameState().addJournalNote("Used forged wrench to loosen seized dynamo bracket. Lift and electrical circuits energized.");
+                        h.setRequiredItemId(null);
+                        startInspectionDialogue("Eivind Holst", "Using the forged wrench, I unbolt the seized bracket. The drive shaft spins freely with sapphire light, restoring electrical power to the lift cage below!", "audio/voices/inspect_staircase_dynamo_unlocked.mp3");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    } else if ("hotspot_caverns_pedestal".equals(h.getId())) {
+                        game.getAudioManager().playSfx("crystal");
+                        game.getGameState().setFlag("CAVERNS_HARMONIZED");
+                        game.getGameState().addJournalNote("Struck 432 Hz tuning fork against piezoelectric altar. Sympathetic resonance established; direct express hoist to observatory powered.");
+                        h.setRequiredItemId(null);
+                        startInspectionDialogue("Eivind Holst", "I strike the 432 Hz tuning fork against the basalt altar and place it into the crystal socket. A pure, resonant hum reverberates through the caverns, calming the tremors and powering the direct express hoist to the summit!", "audio/voices/inspect_caverns_pedestal_unlocked.mp3");
+                        game.getGameState().setActiveItem(null);
+                        return;
+                    } else if ("hotspot_core_crystal".equals(h.getId())) {
+                        game.getAudioManager().playSfx("crystal");
+                        game.getGameState().setFlag("CORE_PRISM_INSTALLED");
+                        game.getGameState().addJournalNote("Installed The Great Azure Focus Prism into the revolving Fresnel turret. Beacon stabilized; Master Control Levers unlocked.");
+                        h.setRequiredItemId(null);
+                        startInspectionDialogue("Eivind Holst", "I carefully seat The Great Azure Focus Prism into the central brass turret. The chaotic flares instantly align into a breathtaking, coherent column of azure light! The Master Control Levers on the dais are now unlocked.", "audio/voices/inspect_core_crystal_unlocked.mp3");
+                        game.getGameState().setActiveItem(null);
+                        return;
                     } else {
+                        game.getAudioManager().playSfx("door");
+                        h.setRequiredItemId(null);
+                        if (h.getInteractionType() == InteractionType.TRANSITION) {
+                            pendingSceneId = h.getTargetSceneId();
+                        }
                         if (h.getDialogueNodeId() != null) {
                             startDialogue(h.getDialogueNodeId());
                         } else {
                             startInspectionDialogue("Eivind Holst", h.getInspectionText(), h.getVoiceAudioPath());
                         }
+                        game.getGameState().setActiveItem(null);
+                        return;
                     }
-                    game.getGameState().setActiveItem(null);
-                    return;
                 } else if (active != null) {
                     startInspectionDialogue("Eivind Holst", "That item does not fit here. I must seek another solution.", "audio/voices/eivind_wrong_item.mp3");
                     return;
                 } else {
                     // Clicked locked mechanism with empty cursor
+                    if ("hotspot_pier_gate".equals(h.getId())) {
+                        startInspectionDialogue("Eivind Holst", "The wrought iron gate is locked tight with a raven-crested padlock. Torvald at the pier holds the key.", "audio/voices/inspect_hotspot_pier_gate_locked.mp3");
+                        return;
+                    }
+                    if ("hotspot_workshop_valve".equals(h.getId())) {
+                        startInspectionDialogue("Eivind Holst", "The high-pressure steam manifold valve is seized tight. I need a heavy drop-forged wrench to turn it.", "audio/voices/inspect_hotspot_workshop_valve_locked.mp3");
+                        return;
+                    }
+                    if ("hotspot_staircase_dynamo".equals(h.getId())) {
+                        startInspectionDialogue("Eivind Holst", "The dynamo drive shaft is blocked by a jammed steel retaining bracket. A wrench can loosen the bolts.", "audio/voices/inspect_hotspot_staircase_dynamo_locked.mp3");
+                        return;
+                    }
+                    if ("hotspot_caverns_pedestal".equals(h.getId())) {
+                        startInspectionDialogue("Eivind Holst", "The crystal altar vibrates violently. A precision acoustic tuning fork calibrated to 432 Hz is needed to harmonize the bedrock.", "audio/voices/inspect_hotspot_caverns_pedestal_locked.mp3");
+                        return;
+                    }
+                    if ("hotspot_core_crystal".equals(h.getId())) {
+                        startInspectionDialogue("Eivind Holst", "The central Fresnel optical socket is vacant. The Great Azure Focus Prism must be installed here to focus the beam.", "audio/voices/inspect_hotspot_core_crystal_locked.mp3");
+                        return;
+                    }
+
                     String lockedVoice = "audio/voices/inspect_" + h.getId() + "_locked.mp3";
                     startInspectionDialogue("Eivind Holst", h.getInspectionText(), lockedVoice);
                     return;
                 }
             }
 
+            // 3. Special check for Master Control Levers in Scene 10
+            if ("hotspot_core_levers".equals(h.getId())) {
+                if (!game.getGameState().hasFlag("CORE_PRISM_INSTALLED")) {
+                    startInspectionDialogue("Eivind Holst", "The master control levers are locked behind a safety interlock. The Great Azure Focus Prism must be installed in the central turret first!", "audio/voices/inspect_core_levers_locked.mp3");
+                    return;
+                } else {
+                    startDialogue("core_levers_dialogue");
+                    return;
+                }
+            }
+
+            // 4. Default interaction types
             switch (h.getInteractionType()) {
                 case PICKUP:
                     game.getAudioManager().playSfx("pickup");

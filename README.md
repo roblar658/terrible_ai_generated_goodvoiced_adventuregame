@@ -93,7 +93,7 @@ graph TD
     L3["Layer 3: Visible Physical Prop & Character Sprites (Smooth 1.03x Pulse)"]
     L4["Layer 4: Golden Radar Pulse Waves (Spacebar / Hotspot Ping)"]
     L5["Layer 5: Floating Glassmorphic Action Badges [TALK], [TAKE], [EXAMINE], [ENTER]"]
-    L6["Layer 6: Top Bar HUD & Quick Navigation Dropdown"]
+    L6["Layer 6: Top Bar HUD (Chapter Title, Reveal, Log, Journal, Audio)"]
     L7["Layer 7: Glassmorphic Dialogue Overlay (Portrait, Name, Typewriter Text)"]
     L8["Layer 8: Bottom Inventory Dock & Inspection Modals"]
     L9["Layer 9: Contextual Dynamic Mouse Cursor"]
@@ -212,7 +212,6 @@ stateDiagram-v2
 | **Hotspot Radar Ping** | **`Spacebar` / `Tab`** | Pulses golden radar waves over all interactive elements on screen (no pixel-hunting). |
 | **Dialogue Backlog History** | **Top Bar "Dialogue Log"** | Opens a scrollable transcript of all past spoken dialogue. |
 | **Expedition Journal** | **Top Bar "Journal"** | Displays all collected clues, chapter lore, and active objectives. |
-| **Fast Chapter Travel** | **Top Bar "Chapters ▾"** | Quick-jump dropdown menu to test any of the 10 scenes instantly. |
 | **Mute / Unmute Audio** | **Top Bar "Audio"** | Toggles ambient soundscapes, voice lines, and sound effects. |
 
 ---
