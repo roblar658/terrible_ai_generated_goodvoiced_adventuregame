@@ -1,0 +1,22 @@
+# Gradle
+.gradle/
+build/
+bin/
+out/
+
+# IDE files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+test_*.mp3
+assets/audio/voices/test_*.mp3
+*.log
